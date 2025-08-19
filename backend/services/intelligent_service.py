@@ -9,6 +9,27 @@ API_KEY = os.getenv("API_KEY")
 API_URL = "https://api.aimlapi.com/v1/chat/completions"
 IMAGE_API_URL = "https://api.aimlapi.com/v1/images/generations"
 
+def repair_json_string(broken_json_string: str):
+    """
+    Sends a broken JSON string back to the AI to be fixed.
+    """
+    repair_prompt = f"""
+    The following JSON string is broken. Please fix any syntax errors (like missing commas, brackets, or unescaped quotes) and return only the perfectly valid JSON object.
+
+    Broken JSON:
+    ```json
+    {broken_json_string}
+    ```
+    """
+    headers = {"Authorization": f"Bearer {API_KEY}"}
+    data = {
+        "model": "openai/gpt-5-chat-latest",
+        "messages": [{"role": "user", "content": repair_prompt}],
+    }
+    response = requests.post(API_URL, headers=headers, json=data)
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
+
 def handle_user_request(user_input: str, target_language: str):
     """
     This function has one job: to generate the full code package.
@@ -48,7 +69,14 @@ def handle_user_request(user_input: str, target_language: str):
         response.raise_for_status()
         
         package_json_str = response.json()["choices"][0]["message"]["content"]
-        package = json.loads(package_json_str)
+        
+        # NEW: Try to parse the JSON, and if it fails, repair it.
+        try:
+            package = json.loads(package_json_str)
+        except json.JSONDecodeError:
+            print("Initial JSON parsing failed. Attempting to repair...")
+            repaired_json_str = repair_json_string(package_json_str)
+            package = json.loads(repaired_json_str)
 
         diagram_prompt = package.get("diagram_prompt")
         if diagram_prompt:
@@ -67,7 +95,7 @@ def handle_user_request(user_input: str, target_language: str):
 
 def generate_image_from_prompt(prompt: str):
     """
-    Calls the "gpt 1" vision model to generate a high-resolution image.
+    Calls the "openai/gpt-image-1" vision model to generate a high-resolution image.
     """
     headers = {"Authorization": f"Bearer {API_KEY}"}
     image_data = { 
