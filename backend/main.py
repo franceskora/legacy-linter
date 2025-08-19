@@ -16,7 +16,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-origins = ["http://localhost:3000"]
+origins = [
+    "http://localhost:3000",
+    "https://legacy-linter.vercel.app",
+    "https://legacy-linter-chiamaka-frances-anyakoras-projects.vercel.app"
+    ]
 
 app.add_middleware(
     CORSMiddleware,
