@@ -11,66 +11,29 @@ IMAGE_API_URL = "https://api.aimlapi.com/v1/images/generations"
 
 def handle_user_request(user_input: str, target_language: str):
     """
-    This is the main orchestrator. It understands the user's intent and
-    can deliver a simple answer or a full code modernization package.
+    This function has one job: to generate the full code package.
     """
     if not API_KEY:
         return {"type": "error", "content": "API Key is not configured."}
 
+    # A simpler, more direct master prompt
     master_prompt = f"""
-    You are 'Linter', an expert AI software architect. Analyze the user's input and determine their intent from the options below.
+    You are 'Linter', an expert AI software architect. A user has submitted a piece of legacy code to be modernized into {target_language}.
 
-    USER INPUT:
+    USER'S LEGACY CODE:
     ```{user_input}```
 
-    Respond with a single JSON object that has a 'type' key and a 'content' key based on the following rules:
+    Your task is to generate a complete software package by performing the following steps and returning a single, final JSON object.
 
-    1.  **Intent: Full Code Modernization Request**
-        - **Condition:** The input is a block of code, and a target language ('{target_language}') is specified.
-        - **Action:** Generate a complete software package.
-        - **JSON Output:**
-            {{
-                "type": "refactor_package",
-                "content": {{
-                    "analysis": "<Your brief analysis of the code's logic>",
-                    "refactored_code": "<The complete, documented, refactored code in {target_language}>",
-                    "audit_report": "<A brief Performance & Security Audit report>",
-                    "unit_test": "<A simple, runnable unit test for the new code>",
-                    "diagram_prompt": "<A detailed text prompt for an AI image generator to create a flowchart. **Crucially, the prompt must end with the instruction: 'Generate this image in a high-resolution 1024x1024 format to ensure all text is sharp and legible.'**>"
-                }}
-            }}
+    1.  **Analyze Logic:** Briefly describe the business logic of the legacy code.
+    2.  **Refactor Code:** Refactor the legacy code into a modern, efficient function in {target_language}.
+    3.  **Generate Documentation:** Add clear, line-by-line comments and a professional docstring to the new function.
+    4.  **Perform Audit:** Provide a brief "Performance & Security Audit" report.
+    5.  **Generate Unit Test:** Write a simple, runnable unit test for the new function.
+    6.  **Create Diagram Prompt:** Write a detailed text prompt for an AI image generator to create a flowchart of the NEWLY refactored code's logic. This prompt must end with the instruction: 'Generate this image in a high-resolution 1024x1024 format to ensure all text is sharp and legible.'
 
-    2.  **Intent: Code Submission without Target Language**
-        - **Condition:** The input is a block of code, but no target language is specified.
-        - **Action:** Identify the source language and ask the user for the target language.
-        - **JSON Output:**
-            {{
-                "type": "clarification",
-                "content": "I've identified this as [Source Language] code. What language would you like to convert it to? I can suggest Python or JavaScript."
-            }}
-
-    3.  **Intent: Website Generation Request (Step-by-Step)**
-        - **Condition:** The user asks to create a webpage.
-        - **Action:** First, generate only the code.
-        - **JSON Output:**
-            {{
-                "type": "website_code",
-                "content": {{
-                    "html_code": "<The generated HTML>",
-                    "css_code": "<The generated CSS>",
-                    "js_code": "<The generated JS>",
-                    "follow_up_prompt": "I've generated the code for your webpage. Would you like me to generate a visual preview of how it will look?"
-                }}
-            }}
-
-    4.  **Intent: General Question / Follow-up**
-        - **Condition:** The input is a question or a statement, not a block of code for modernization or website generation.
-        - **Action:** Answer the question conversationally.
-        - **JSON Output:**
-            {{
-                "type": "answer",
-                "content": "<Your conversational answer>"
-            }}
+    Return your entire response as a single JSON object with the following keys:
+    "analysis", "refactored_code", "audit_report", "unit_test", "diagram_prompt".
     """
 
     headers = {"Authorization": f"Bearer {API_KEY}"}
@@ -84,16 +47,18 @@ def handle_user_request(user_input: str, target_language: str):
         response = requests.post(API_URL, headers=headers, json=data)
         response.raise_for_status()
         
-        decision_json_str = response.json()["choices"][0]["message"]["content"]
-        decision = json.loads(decision_json_str)
+        package_json_str = response.json()["choices"][0]["message"]["content"]
+        package = json.loads(package_json_str)
 
-        if decision.get("type") == "refactor_package":
-            diagram_prompt = decision["content"].get("diagram_prompt")
-            if diagram_prompt:
-                image_url = generate_image_from_prompt(diagram_prompt)
-                decision["content"]["image_url"] = image_url
+        diagram_prompt = package.get("diagram_prompt")
+        if diagram_prompt:
+            image_url = generate_image_from_prompt(diagram_prompt)
+            package["image_url"] = image_url
 
-        return decision
+        return {
+            "type": "refactor_package",
+            "content": package
+        }
 
     except Exception as e:
         print(f"An error occurred in the orchestrator: {e}")
@@ -106,10 +71,10 @@ def generate_image_from_prompt(prompt: str):
     """
     headers = {"Authorization": f"Bearer {API_KEY}"}
     image_data = { 
-        "model": "openai/gpt-image-1", 
+        "model": "openai/gpt-image-1",
         "prompt": prompt, 
         "n": 1, 
-        "size": "1024x1024" # Ensuring high resolution
+        "size": "1024x1024"
     }
     
     try:
