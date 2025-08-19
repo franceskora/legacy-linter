@@ -1,7 +1,7 @@
 # routers/auth.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import schemas, models, backend.security as security
+import schemas, models, security
 from database import SessionLocal
 
 router = APIRouter(
