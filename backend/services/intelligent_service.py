@@ -28,6 +28,7 @@ def repair_json_string(broken_json_string: str):
     }
     response = requests.post(API_URL, headers=headers, json=data)
     response.raise_for_status()
+    print(f"RAW REPAIR RESPONSE: {response.text}")
     return response.json()["choices"][0]["message"]["content"]
 
 def handle_user_request(user_input: str, target_language: str):
