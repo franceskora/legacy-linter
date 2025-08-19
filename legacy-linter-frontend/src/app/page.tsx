@@ -49,7 +49,8 @@ export default function LandingPage() {
           </div>
           <div className="p-6">
             <h3 className="text-xl font-bold mb-2">Architectural Visualization</h3>
-            <p className="text-slate-600">Get AI-generated diagrams and flowcharts to visually understand your new code's architecture.</p>
+            {/* CORRECTED LINE */}
+            <p className="text-slate-600">Get AI-generated diagrams and flowcharts to visually understand your new code&apos;s architecture.</p>
           </div>
         </div>
       </section>
