@@ -9,27 +9,44 @@ API_KEY = os.getenv("API_KEY")
 API_URL = "https://api.aimlapi.com/v1/chat/completions"
 IMAGE_API_URL = "https://api.aimlapi.com/v1/images/generations"
 
-def repair_json_string(broken_json_string: str):
+def repair_and_parse_json(potentially_broken_json: str):
     """
-    Sends a broken JSON string back to the AI to be fixed.
+    Attempts to parse a JSON string. If it fails, it sends the string
+    to the AI to be repaired and then tries to parse it again.
     """
-    repair_prompt = f"""
-    The following JSON string is broken. Please fix any syntax errors (like missing commas, brackets, or unescaped quotes) and return only the perfectly valid JSON object.
+    try:
+        return json.loads(potentially_broken_json)
+    except json.JSONDecodeError:
+        print("Initial JSON parsing failed. Attempting to repair...")
+        repair_prompt = f"""
+        The following string is broken and is not valid JSON. Please fix any syntax errors 
+        and return ONLY the perfectly valid JSON object. Do not add any explanation or markdown formatting.
 
-    Broken JSON:
-    ```json
-    {broken_json_string}
-    ```
-    """
-    headers = {"Authorization": f"Bearer {API_KEY}"}
-    data = {
-        "model": "openai/gpt-5-chat-latest",
-        "messages": [{"role": "user", "content": repair_prompt}],
-    }
-    response = requests.post(API_URL, headers=headers, json=data)
-    response.raise_for_status()
-    print(f"RAW REPAIR RESPONSE: {response.text}")
-    return response.json()["choices"][0]["message"]["content"]
+        Broken String:
+        ```
+        {potentially_broken_json}
+        ```
+        """
+        headers = {"Authorization": f"Bearer {API_KEY}"}
+        data = {
+            "model": "openai/gpt-5-chat-latest",
+            "messages": [{"role": "user", "content": repair_prompt}],
+        }
+        
+        try:
+            response = requests.post(API_URL, headers=headers, json=data)
+            response.raise_for_status()
+            repaired_string = response.json()["choices"][0]["message"]["content"]
+            
+            print(f"RAW REPAIR RESPONSE: {repaired_string}")
+            
+            if repaired_string.startswith("```json"):
+                repaired_string = repaired_string[7:-3].strip()
+            
+            return json.loads(repaired_string)
+        except Exception as e:
+            print(f"Could not repair JSON. Error: {e}")
+            raise
 
 def handle_user_request(user_input: str, target_language: str):
     """
@@ -44,7 +61,7 @@ def handle_user_request(user_input: str, target_language: str):
     USER'S LEGACY CODE:
     ```{user_input}```
 
-    Your task is to generate a complete software package by performing the following steps and returning a single, final JSON object.
+    Your task is to generate a complete software package by performing the following steps and returning a single, final JSON object with the following keys: "analysis", "refactored_code", "audit_report", "unit_test", "diagram_prompt".
 
     1.  **Analyze Logic:** Briefly describe the business logic of the legacy code.
     2.  **Refactor Code:** Refactor the legacy code into a modern, efficient function in {target_language}.
@@ -52,9 +69,6 @@ def handle_user_request(user_input: str, target_language: str):
     4.  **Perform Audit:** Provide a brief "Performance & Security Audit" report.
     5.  **Generate Unit Test:** Write a simple, runnable unit test for the new function.
     6.  **Create Diagram Prompt:** Write a detailed text prompt for an AI image generator to create a flowchart of the NEWLY refactored code's logic. This prompt must end with the instruction: 'Generate this image in a high-resolution 1024x1024 format to ensure all text is sharp and legible.'
-
-    Return your entire response as a single JSON object with the following keys:
-    "analysis", "refactored_code", "audit_report", "unit_test", "diagram_prompt".
     """
 
     headers = {"Authorization": f"Bearer {API_KEY}"}
@@ -66,26 +80,18 @@ def handle_user_request(user_input: str, target_language: str):
     
     try:
         response = requests.post(API_URL, headers=headers, json=data)
-        response.raise_for_status() # This will raise an error for 4xx or 5xx responses
+        response.raise_for_status()
         
         package_json_str = response.json()["choices"][0]["message"]["content"]
-        
-        try:
-            package = json.loads(package_json_str)
-        except json.JSONDecodeError:
-            print("Initial JSON parsing failed. Attempting to repair...")
-            repaired_json_str = repair_json_string(package_json_str)
-            package = json.loads(repaired_json_str)
+        package = repair_and_parse_json(package_json_str)
 
         diagram_prompt = package.get("diagram_prompt")
         if diagram_prompt:
             image_url = generate_image_from_prompt(diagram_prompt)
-            package["image_url"] = image_url
+            if image_url:
+                package["image_url"] = image_url
 
-        return {
-            "type": "refactor_package",
-            "content": package
-        }
+        return {"type": "refactor_package", "content": package}
 
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
@@ -96,11 +102,7 @@ def handle_user_request(user_input: str, target_language: str):
         print(f"An error occurred in the orchestrator: {e}")
         return {"type": "error", "content": "Sorry, I encountered an error."}
 
-
 def generate_image_from_prompt(prompt: str):
-    """
-    Calls the "openai/gpt-image-1" vision model to generate a high-resolution image.
-    """
     headers = {"Authorization": f"Bearer {API_KEY}"}
     image_data = { 
         "model": "openai/gpt-image-1",
