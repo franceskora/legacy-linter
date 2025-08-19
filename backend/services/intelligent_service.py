@@ -37,7 +37,6 @@ def handle_user_request(user_input: str, target_language: str):
     if not API_KEY:
         return {"type": "error", "content": "API Key is not configured."}
 
-    # A simpler, more direct master prompt
     master_prompt = f"""
     You are 'Linter', an expert AI software architect. A user has submitted a piece of legacy code to be modernized into {target_language}.
 
@@ -63,14 +62,13 @@ def handle_user_request(user_input: str, target_language: str):
         "messages": [{"role": "user", "content": master_prompt}],
         "response_format": {"type": "json_object"}
     }
-
+    
     try:
         response = requests.post(API_URL, headers=headers, json=data)
-        response.raise_for_status()
+        response.raise_for_status() # This will raise an error for 4xx or 5xx responses
         
         package_json_str = response.json()["choices"][0]["message"]["content"]
         
-        # NEW: Try to parse the JSON, and if it fails, repair it.
         try:
             package = json.loads(package_json_str)
         except json.JSONDecodeError:
@@ -88,6 +86,11 @@ def handle_user_request(user_input: str, target_language: str):
             "content": package
         }
 
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+        print(f"Status Code: {http_err.response.status_code}")
+        print(f"Response Body: {http_err.response.text}")
+        return {"type": "error", "content": f"The AI API returned an error: {http_err.response.status_code}"}
     except Exception as e:
         print(f"An error occurred in the orchestrator: {e}")
         return {"type": "error", "content": "Sorry, I encountered an error."}
