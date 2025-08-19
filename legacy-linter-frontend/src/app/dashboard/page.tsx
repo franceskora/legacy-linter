@@ -1,7 +1,7 @@
 // src/app/dashboard/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Image from 'next/image'; // Import the Next.js Image component
 
@@ -30,6 +30,14 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
   const handleCopy = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -135,7 +143,9 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col h-full">
+    // CORRECTED: Added height constraints for the flexbox layout to work correctly
+    <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col h-full max-h-[calc(100vh-5rem)]">
+      {/* Chat History Display */}
       <div className="flex-1 overflow-y-auto mb-6 pr-2 space-y-6">
         {messages.length === 0 && (
           <div className="text-center text-slate-400 mt-16">
@@ -149,8 +159,11 @@ export default function HomePage() {
           </div>
         ))}
         {isLoading && <div className="text-center text-slate-500">Thinking...</div>}
+        {/* NEW: Invisible element to mark the end for auto-scrolling */}
+        <div ref={messagesEndRef} />
       </div>
 
+      {/* Input Area - This will now stick to the bottom */}
       <div className="mt-auto border-t border-slate-200 pt-4">
         <div className="flex items-start gap-4">
           <textarea
