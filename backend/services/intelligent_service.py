@@ -75,7 +75,7 @@ def handle_user_request(user_input: str, target_language: str):
 
     headers = {"Authorization": f"Bearer {API_KEY}"}
     data = {
-        "model": "gpt-5",
+        "model": "openai/gpt-5-chat-latest",
         "messages": [{"role": "user", "content": master_prompt}],
         "response_format": {"type": "json_object"}
     }
@@ -106,7 +106,7 @@ def generate_image_from_prompt(prompt: str):
     """
     headers = {"Authorization": f"Bearer {API_KEY}"}
     image_data = { 
-        "model": "gpt 1", # Using your preferred model
+        "model": "openai/gpt-image-1", 
         "prompt": prompt, 
         "n": 1, 
         "size": "1024x1024" # Ensuring high resolution
