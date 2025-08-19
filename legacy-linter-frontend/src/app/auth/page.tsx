@@ -16,28 +16,40 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  // src/app/auth/page.tsx (Corrected handleSubmit function)
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent the form from refreshing the page
+    e.preventDefault();
     setError('');
 
-    // For the hackathon, both sign in and sign up will redirect to the dashboard
-    // In a real app, you'd have separate logic for each.
+    // Get the API URL from environment variables
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      setError("API URL is not configured. Please contact support.");
+      return;
+    }
+
     if (isSignUp) {
-      // Handle Sign Up
       try {
-        await axios.post('http://127.0.0.1:8000/auth/register', {
+        // Use the live API URL for the register endpoint
+        await axios.post(`${apiUrl.replace('/chat/', '/auth/register')}`, {
           full_name: fullName,
           email: email,
           password: password,
         });
         // On success, redirect to the dashboard
         router.push('/dashboard');
-      } catch (err: any) {
-        setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      } catch (err) {
+        // Correctly typed error handling
+        if (axios.isAxiosError(err) && err.response) {
+          setError(err.response.data.detail || 'Registration failed.');
+        } else {
+          setError('An unknown error occurred during registration.');
+        }
       }
     } else {
-      // Handle Sign In (simulated for now)
-      // A real login would call a /token endpoint and save the JWT
+      // In a real app, you would call a /token or /login endpoint here
+      // For the hackathon, we'll just redirect
       router.push('/dashboard');
     }
   };

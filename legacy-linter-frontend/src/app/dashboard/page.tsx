@@ -1,8 +1,9 @@
-// src/app/page.tsx
+// src/app/dashboard/page.tsx
 'use client';
 
 import { useState } from 'react';
 import axios from 'axios';
+import Image from 'next/image'; // Import the Next.js Image component
 
 // Define the shape of the full package we get from the backend
 interface RefactorPackage {
@@ -44,8 +45,16 @@ export default function HomePage() {
     setMessages(newMessages);
     setInputCode('');
     
+    // CORRECTED: Use the environment variable for the API URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      setMessages([...newMessages, { role: 'ai', content: "API URL is not configured.", type: 'error' }]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await axios.post('http://127.0.0.1:8000/chat/', {
+      const response = await axios.post(apiUrl, {
         legacy_code: inputCode,
         target_language: targetLanguage, 
       });
@@ -115,7 +124,8 @@ export default function HomePage() {
           {content.image_url && (
             <div>
               <h3 className="font-semibold text-slate-800">5. Architectural Diagram</h3>
-              <img src={content.image_url} alt="Architectural Diagram" className="mt-2 rounded-md border" />
+              {/* CORRECTED: Use the Next.js Image component */}
+              <Image src={content.image_url} alt="Architectural Diagram" width={1024} height={1024} className="mt-2 rounded-md border w-full h-auto" />
             </div>
           )}
         </div>
