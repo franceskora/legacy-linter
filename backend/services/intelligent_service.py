@@ -31,6 +31,7 @@ def repair_and_parse_json(potentially_broken_json: str):
         data = {
             "model": "openai/gpt-5-chat-latest",
             "messages": [{"role": "user", "content": repair_prompt}],
+            "max_tokens": 4096,
         }
         
         try:
@@ -75,7 +76,8 @@ def handle_user_request(user_input: str, target_language: str):
     data = {
         "model": "openai/gpt-5-chat-latest",
         "messages": [{"role": "user", "content": master_prompt}],
-        "response_format": {"type": "json_object"}
+        "response_format": {"type": "json_object"},
+        "max_tokens": 4096,
     }
     
     try:
