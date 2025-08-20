@@ -2,54 +2,46 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Import the router
+import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Make sure Link is imported
 import axios from 'axios';
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter(); // Initialize the router
+  const router = useRouter();
 
-  // State to hold form data
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // src/app/auth/page.tsx (Corrected handleSubmit function)
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Get the API URL from environment variables
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
-      setError("API URL is not configured. Please contact support.");
+      setError("API URL is not configured.");
       return;
     }
 
     if (isSignUp) {
       try {
-        // Use the live API URL for the register endpoint
         await axios.post(`${apiUrl.replace('/chat/', '/auth/register')}`, {
           full_name: fullName,
           email: email,
           password: password,
         });
-        // On success, redirect to the dashboard
         router.push('/dashboard');
       } catch (err) {
-        // Correctly typed error handling
         if (axios.isAxiosError(err) && err.response) {
           setError(err.response.data.detail || 'Registration failed.');
         } else {
-          setError('An unknown error occurred during registration.');
+          setError('An unknown error occurred.');
         }
       }
     } else {
-      // In a real app, you would call a /token or /login endpoint here
-      // For the hackathon, we'll just redirect
       router.push('/dashboard');
     }
   };
@@ -66,7 +58,6 @@ export default function AuthPage() {
           </p>
         </div>
 
-        {/* Form now calls handleSubmit */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           {isSignUp && (
             <div>
@@ -114,6 +105,20 @@ export default function AuthPage() {
                 </svg>
               </button>
             </div>
+          </div>
+          
+          {/* RE-ADDED: Terms and Conditions (Sign Up Only) */}
+          {isSignUp && (
+            <div className="flex items-center">
+              <input id="terms-check" type="checkbox" required className="h-4 w-4 text-sky-600 border-gray-300 rounded" />
+              <label htmlFor="terms-check" className="ml-2 block text-sm text-gray-900">I agree to the <Link href="/terms" className="text-sky-600 hover:underline">Terms and Conditions</Link></label>
+            </div>
+          )}
+
+          {/* RE-ADDED: Bot Protection */}
+          <div className="flex items-center">
+            <input id="robot-check" type="checkbox" className="h-4 w-4 text-sky-600 border-gray-300 rounded" />
+            <label htmlFor="robot-check" className="ml-2 block text-sm text-gray-900">I am not a robot</label>
           </div>
           
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
