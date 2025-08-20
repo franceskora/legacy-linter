@@ -1,7 +1,7 @@
 # backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, projects  # Import both routers
+from routers import auth, projects, history
 from database import engine
 import models.users
 import models.projects
@@ -33,6 +33,7 @@ app.add_middleware(
 # Include both of our routers in the application
 app.include_router(auth.router)
 app.include_router(projects.router)
+app.include_router(history.router)
 
 @app.get("/")
 def read_root():
