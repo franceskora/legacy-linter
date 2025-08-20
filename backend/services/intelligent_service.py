@@ -90,6 +90,8 @@ def handle_user_request(user_input: str, target_language: str):
         diagram_prompt = package.get("diagram_prompt")
         if diagram_prompt:
             image_url = generate_image_from_prompt(diagram_prompt)
+            print(f"GENERATED IMAGE URL: {image_url}")
+            
             if image_url:
                 package["image_url"] = image_url
 
